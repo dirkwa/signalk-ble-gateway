@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add a generic Victron BLE energy-and-radio pictogram to the WebApp favicon,
+  manifest, and header.
+
 ## 0.2.0
 
 - Promote the official Signal K BLE Provider API consumer to stable after the
