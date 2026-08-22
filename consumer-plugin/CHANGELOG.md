@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.1
 
 - Add a generic Victron BLE energy-and-radio pictogram to the WebApp favicon,
   manifest, and header.

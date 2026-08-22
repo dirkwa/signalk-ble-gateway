@@ -17,8 +17,8 @@ multiple vessel compartments.
 ## Installation
 
 Install `signalk-victron-ble-consumer` from the Signal K AppStore, then enable
-and configure it under **Server > Plugin Config**. Version 0.2.0 is the stable
-release for the official Signal K BLE Provider API.
+and configure it under **Server > Plugin Config**. Version 0.2.1 is the current
+stable release for the official Signal K BLE Provider API.
 
 ## Development installation
 

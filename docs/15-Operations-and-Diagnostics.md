@@ -144,12 +144,12 @@ The stable consumer is published by GitHub Actions from a release tag matching
 the npm package's Trusted Publisher for this GitHub repository and the
 `publish-consumer.yml` workflow. No long-lived npm token is stored in GitHub.
 
-To publish version `0.2.0`, push the matching tag after committing the version
+To publish version `0.2.1`, push the matching tag after committing the version
 change:
 
 ```sh
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.2.1
+git push origin v0.2.1
 ```
 
 ## Acceptance record

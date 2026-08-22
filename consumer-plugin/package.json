@@ -1,6 +1,6 @@
 {
   "name": "signalk-victron-ble-consumer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Victron consumer for the official Signal K BLE Provider API",
   "main": "index.js",
   "type": "commonjs",
