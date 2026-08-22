@@ -17,7 +17,8 @@ for Signal K Server 2.31 or newer.
 
 The project combines three pieces:
 
-- SensESP-based ESP32 BLE gateways for distributed coverage;
+- the [`dirkwa/sensesp-ble-gateway`](https://github.com/dirkwa/sensesp-ble-gateway)
+  SensESP transport for distributed ESP32 BLE coverage;
 - Signal K's official BLE Provider API and `app.bleApi` advertisement stream;
 - a server-side Victron consumer that decrypts configured Instant Readout
   advertisements and publishes Signal K battery and charger paths.

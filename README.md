@@ -1,6 +1,8 @@
 # Signal K BLE Gateway
 
-An open, universal ESP32 BLE advertisement gateway for Signal K.
+An open Victron consumer and deployment reference built on the
+[`dirkwa/sensesp-ble-gateway`](https://github.com/dirkwa/sensesp-ble-gateway)
+transport for distributed Signal K BLE coverage.
 
 The project deliberately separates transport, Signal K integration, and
 manufacturer-specific decoding:
@@ -22,8 +24,9 @@ available as `v0.1.0-rc.1` and on the 0.1 release line.
 
 ## Why this project is different
 
-This is a Victron consumer for Signal K's new BLE Provider API and distributed
-ESP32 BLE gateways. The consumer subscribes to `app.bleApi` advertisements; it
+This is a Victron consumer for Signal K's new BLE Provider API, built on the
+SensESP BLE Gateway transport and distributed ESP32 BLE gateways. The consumer
+subscribes to `app.bleApi` advertisements; it
 does not open a local BlueZ adapter, scan `hci0`, or compete with other BLE
 plugins for hardware access. Gateways can be placed in separate engine rooms,
 cabins, or other areas of a vessel while Signal K receives one unified stream.
@@ -72,7 +75,8 @@ implemented only when a consumer needs GATT.
 
 ## Components
 
-- `firmware/`: generic ESP32 BLE advertisement gateway
+- `firmware/`: project firmware integration using the SensESP BLE Gateway
+  transport
 - `consumer-plugin/`: Victron decoder and diagnostic web application
 - `docs/`: architecture, protocol, operation, testing, and roadmap
 
