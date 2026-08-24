@@ -48,6 +48,26 @@ built specifically around the new Signal K BLE Provider API.
 - automated provider and consumer tests passing,
 - ESP32 firmware build passing.
 
+## Victron device support
+
+Support refers to decoded BLE advertisement data and published Signal K
+values. Device recognition alone is not considered support.
+
+| Victron family | Status | Signal K output |
+| --- | --- | --- |
+| Lynx Smart BMS | Supported and tested | `electrical.batteries.<device-id>` |
+| Orion XS | Supported and tested | `electrical.chargers.<device-id>` |
+| SmartSolar MPPT | Planned; decoder not implemented | — |
+| SmartShunt / BMV | Planned; decoder not implemented | — |
+| Orion-Tr | Planned; decoder not implemented | — |
+| Smart Battery Sense | Planned; decoder not implemented | — |
+| Other Victron BLE families | Not yet assessed | — |
+
+Additional device families will be marked supported only after we have real
+advertisement captures, a verified decoder, fixture-based tests, and confirmed
+Signal K paths. See the [Victron coverage roadmap](TODO.md#priority-7-expand-victron-ble-coverage)
+for the current development order.
+
 Lynx Smart BMS values are published below:
 
 ```text
