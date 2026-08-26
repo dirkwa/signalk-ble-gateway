@@ -17,8 +17,19 @@ multiple vessel compartments.
 ## Installation
 
 Install `signalk-victron-ble-consumer` from the Signal K AppStore, then enable
-and configure it under **Server > Plugin Config**. Version 0.2.1 is the current
-stable release for the official Signal K BLE Provider API.
+and configure it under **Server > Plugin Config**. The MPPT test build is
+`0.2.2-mppt.0`; it is a development build and is not yet an AppStore release.
+
+To test the MPPT build directly on a Signal K server:
+
+```sh
+npm install https://github.com/haipule/signalk-ble-gateway/archive/refs/heads/feat/victron-mppt-support.tar.gz
+```
+
+If installing from a checkout, use `npm link` as described below. Restart
+Signal K after installation, enable the plugin, and configure the MPPT with
+its 32-character Victron advertisement key. The plugin requires the official
+Signal K BLE Provider API and a provider that supplies the advertisements.
 
 ## Development installation
 
@@ -54,6 +65,20 @@ electrical.chargers.<id>.current
 electrical.chargers.<id>.inputVoltage
 electrical.chargers.<id>.inputCurrent
 ```
+
+SmartSolar MPPT values are also published as a charger:
+
+```text
+electrical.chargers.<id>.voltage
+electrical.chargers.<id>.current
+electrical.chargers.<id>.power
+electrical.chargers.<id>.energy
+```
+
+For Issue #1 testing, please compare these values with `victron-ble read` and
+report the plugin status, Signal K paths, and any errors. Do not post the
+advertisement key. If raw advertisements are needed, mask the MAC address and
+share only the payload and RSSI.
 
 State, error code, and shutdown reason remain diagnostic-only. Unknown record
 types stay visible as raw data and never produce guessed measurements.

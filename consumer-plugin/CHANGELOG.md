@@ -23,3 +23,8 @@
 - Publish validated battery and charger measurements as Signal K deltas.
 - Provide a protected diagnostic web application without exposing encryption
   keys.
+## 0.2.2-mppt.0
+
+- Add experimental SmartSolar MPPT Instant Readout support (record type `0x01`).
+- Publish battery voltage/current, solar power, and today's yield.
+- Add test instructions for GitHub issue #1.

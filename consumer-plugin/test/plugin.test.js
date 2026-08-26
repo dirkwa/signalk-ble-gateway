@@ -108,3 +108,22 @@ test('publishes Orion output and input measurements on charger paths', () => {
     { path: 'electrical.chargers.orionSt.inputCurrent', value: 48.8 }
   ])
 })
+
+test('publishes Solar Charger measurements on charger paths', () => {
+  const delta = measurementDelta({ id: 'mppt' }, {
+    record_type: 0x01,
+    measurements: {
+      battery_voltage_v: 13.48,
+      battery_charging_current_a: 3.6,
+      solar_power_w: 50,
+      yield_today_wh: 930
+    }
+  })
+
+  assert.deepEqual(delta.updates[0].values, [
+    { path: 'electrical.chargers.mppt.voltage', value: 13.48 },
+    { path: 'electrical.chargers.mppt.current', value: 3.6 },
+    { path: 'electrical.chargers.mppt.power', value: 50 },
+    { path: 'electrical.chargers.mppt.energy', value: 930 }
+  ])
+})

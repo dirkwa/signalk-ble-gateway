@@ -57,7 +57,7 @@ values. Device recognition alone is not considered support.
 | --- | --- | --- |
 | Lynx Smart BMS | Supported and tested | `electrical.batteries.<device-id>` |
 | Orion XS | Supported and tested | `electrical.chargers.<device-id>` |
-| SmartSolar MPPT | Planned; decoder not implemented | — |
+| SmartSolar MPPT 150/35 (`0xa058`) | In development; experimental decoder available | `electrical.chargers.<device-id>` |
 | SmartShunt / BMV | Planned; decoder not implemented | — |
 | Orion-Tr | Planned; decoder not implemented | — |
 | Smart Battery Sense | Planned; decoder not implemented | — |

@@ -82,7 +82,9 @@ function measurementDelta(device, decoded) {
   const values = decoded.measurements
   const candidates = decoded.record_type === 0x0f
     ? orionCandidates(device.id, values)
-    : lynxCandidates(device.id, values)
+    : decoded.record_type === 0x01
+      ? solarChargerCandidates(device.id, values)
+      : lynxCandidates(device.id, values)
   return {
     updates: [{
       source: { label: 'Victron BLE', src: device.id },
@@ -92,6 +94,16 @@ function measurementDelta(device, decoded) {
         .map(([path, value]) => ({ path, value }))
     }]
   }
+}
+
+function solarChargerCandidates(id, values) {
+  const base = `electrical.chargers.${id}`
+  return [
+    [`${base}.voltage`, values.battery_voltage_v],
+    [`${base}.current`, values.battery_charging_current_a],
+    [`${base}.power`, values.solar_power_w],
+    [`${base}.energy`, values.yield_today_wh]
+  ]
 }
 
 function lynxCandidates(id, values) {

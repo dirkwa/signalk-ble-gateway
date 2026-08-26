@@ -3,7 +3,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const crypto = require('node:crypto')
-const { decodeEnvelope, decodeLynxSmartBms, decodeOrionXs } = require('../lib/victron')
+const { decodeEnvelope, decodeLynxSmartBms, decodeOrionXs, decodeSolarCharger } = require('../lib/victron')
 
 function advertisementFor({ keyHex, modelId = 0xa389, recordType = 2, nonce = 0x1234, clear }) {
   const key = Buffer.from(keyHex, 'hex')
@@ -102,6 +102,27 @@ test('decodes the published Orion XS instant-readout layout', () => {
     input_current_a: 48.8,
     off_reason: 0,
     off_reasons: []
+  })
+})
+
+test('decodes the documented Solar Charger layout', () => {
+  const data = Buffer.alloc(12)
+  data[0] = 5
+  data[1] = 0
+  data.writeInt16LE(1348, 2)
+  data.writeInt16LE(36, 4)
+  data.writeUInt16LE(93, 6)
+  data.writeUInt16LE(50, 8)
+  data[10] = 0x14
+
+  assert.deepEqual(decodeSolarCharger(data), {
+    charge_state: 'float',
+    charger_error: 'no_error',
+    battery_voltage_v: 13.48,
+    battery_charging_current_a: 3.6,
+    yield_today_wh: 930,
+    solar_power_w: 50,
+    external_device_load_a: 2
   })
 })
 

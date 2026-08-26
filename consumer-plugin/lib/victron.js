@@ -42,6 +42,8 @@ function decodeEnvelope(advertisement, keyValue) {
     ? decodeLynxSmartBms(decrypted)
     : recordType === 0x0f
       ? decodeOrionXs(decrypted)
+      : recordType === 0x01
+        ? decodeSolarCharger(decrypted)
       : null
 
   return {
@@ -120,6 +122,30 @@ function decodeOrionXs(data) {
   }
 }
 
+function decodeSolarCharger(data) {
+  const chargeState = readBits(data, 0, 8)
+  const chargerError = readBits(data, 8, 8)
+  const batteryVoltage = readBits(data, 16, 16, true)
+  const batteryCurrent = readBits(data, 32, 16, true)
+  const yieldToday = readBits(data, 48, 16)
+  const solarPower = readBits(data, 64, 16)
+  const externalLoad = readBits(data, 80, 9)
+
+  const chargeStates = {
+    0: 'off', 3: 'bulk', 4: 'absorption', 5: 'float', 7: 'equalization'
+  }
+  const errors = { 0: 'no_error' }
+  return {
+    charge_state: chargeState === 0xff ? null : (chargeStates[chargeState] || `unknown_${chargeState}`),
+    charger_error: chargerError === 0xff ? null : (errors[chargerError] || `unknown_${chargerError}`),
+    battery_voltage_v: valueUnless(batteryVoltage, 0x7fff, value => value * 0.01),
+    battery_charging_current_a: valueUnless(batteryCurrent, 0x7fff, value => value * 0.1),
+    yield_today_wh: valueUnless(yieldToday, 0xffff, value => value * 10),
+    solar_power_w: valueUnless(solarPower, 0xffff),
+    external_device_load_a: valueUnless(externalLoad, 0x1ff, value => value * 0.1)
+  }
+}
+
 function decodeOrionOffReasons(value) {
   if (value === null) return []
   const reasons = []
@@ -133,6 +159,7 @@ module.exports = {
   decodeLynxSmartBms,
   decodeOrionOffReasons,
   decodeOrionXs,
+  decodeSolarCharger,
   normalizeKey,
   RECORD_TYPES,
   VICTRON_COMPANY_ID
