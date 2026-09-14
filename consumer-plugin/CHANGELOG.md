@@ -51,3 +51,16 @@
   settled meaning. A live SmartSolar MPPT reported state 252, which is
   `external_control` and previously decoded as `unknown_252`.
 - Add test instructions for GitHub issue #1.
+- Decode the remaining record types with a published layout: battery monitor
+  (`0x02`, SmartShunt and BMV), inverter (`0x03`), SmartLithium (`0x05`),
+  Inverter RS (`0x06`), Smart Battery Protect (`0x09`), Multi RS (`0x0B`),
+  VE.Bus (`0x0C`) and DC energy meter (`0x0D`). These are decoded from the
+  specification without hardware and are documented as untested.
+- Publish the battery monitor and SmartLithium below
+  `electrical.batteries.<id>`, and the inverter records below
+  `electrical.inverters.<id>`. Records `0x09`, `0x0B`, `0x0C` and `0x0D`
+  decode but publish nothing, as Signal K has no matching group.
+- Resolve the auxiliary field of records `0x02` and `0x0D` through its 2-bit
+  selector, returning only the reading the device actually sent.
+- Leave records `0x07` and `0x08` unimplemented; the specification marks both
+  layouts undetermined.

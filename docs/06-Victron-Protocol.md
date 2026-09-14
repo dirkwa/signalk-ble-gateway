@@ -60,6 +60,36 @@ Record type `0x04` is distinct from the Orion XS record `0x0F` below. They
 have different layouts, and decoding one with the other's field offsets
 produces plausible but wrong voltages.
 
+## Records decoded without hardware
+
+Record types `0x02`, `0x03`, `0x05`, `0x06`, `0x09`, `0x0B`, `0x0C` and `0x0D`
+are decoded from the published specification alone. Their tests use fixtures
+built from the documented layouts rather than captured advertisements. They
+are documented as untested until someone confirms them against VictronConnect
+on real hardware.
+
+Record types `0x07` and `0x08` remain unimplemented. The specification states
+that both layouts are still to be determined and might change, so a decoder
+would be guesswork rather than a reading of the document.
+
+### The auxiliary field of records 0x02 and 0x0D
+
+Both the battery monitor and the DC energy meter carry a 16-bit field whose
+meaning is chosen by a 2-bit selector that appears *after* it in the record:
+starter voltage, mid-point voltage, or temperature. The decoder returns only
+the selected reading and leaves the others null. Interpreting the same bits
+under all three meanings at once would report two values the device never
+sent.
+
+### The start-bit numbering of record 0x09
+
+The specification tables number each record's first field from start bit 32,
+because the first 32 bits are the record header. The Smart Battery Protect
+table instead numbers its first field from bit 8. That is a numbering quirk in
+the document rather than a gap in the data: both published reference
+implementations pack the record's fields from the first bit of the decrypted
+payload, so this consumer uses the same convention as every other record.
+
 ## Orion XS
 
 The observed Orion XS model `0xA3F8` uses record type `0x0F`. Its published

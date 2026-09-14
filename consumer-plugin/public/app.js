@@ -88,7 +88,86 @@ function measurementFields(decoded) {
       field('Shutdown reason', offReason(measurements))
     ]
   }
+  if (decoded?.record_type === 0x02 || decoded?.record_type === 0x0d) {
+    return [
+      field('Battery voltage', format(measurements?.battery_voltage_v, 'V')),
+      field('Battery current', format(measurements?.battery_current_a, 'A')),
+      field('State of charge', format(measurements?.state_of_charge_percent, '%')),
+      field('Time remaining', duration(measurements?.time_to_go_s)),
+      field('Consumed capacity', format(measurements?.consumed_ah, 'Ah')),
+      field('Aux reading', measurements?.aux_input),
+      field('Starter voltage', format(measurements?.aux_voltage_v, 'V')),
+      field('Mid-point voltage', format(measurements?.mid_voltage_v, 'V')),
+      field('Temperature', format(measurements?.temperature_k, 'K')),
+      field('Alarm reason', hex(measurements?.alarm_reason))
+    ]
+  }
+  if (decoded?.record_type === 0x03) {
+    return [
+      field('Device state', measurements?.state_name ?? measurements?.state),
+      field('Battery voltage', format(measurements?.battery_voltage_v, 'V')),
+      field('AC voltage', format(measurements?.ac_voltage_v, 'V')),
+      field('AC current', format(measurements?.ac_current_a, 'A')),
+      field('AC apparent power', format(measurements?.ac_apparent_power_va, 'VA')),
+      field('Alarm reason', hex(measurements?.alarm_reason))
+    ]
+  }
+  if (decoded?.record_type === 0x06) {
+    return [
+      field('Device state', measurements?.state_name ?? measurements?.state),
+      field('Charger error', measurements?.error_name ?? measurements?.error),
+      field('Battery voltage', format(measurements?.battery_voltage_v, 'V')),
+      field('Battery current', format(measurements?.battery_current_a, 'A')),
+      field('PV power', format(measurements?.solar_power_w, 'W')),
+      field('Yield today', kilowattHours(measurements?.yield_today_j)),
+      field('AC out power', format(measurements?.ac_out_power_w, 'W'))
+    ]
+  }
+  if (decoded?.record_type === 0x05) {
+    return [
+      field('Battery voltage', format(measurements?.battery_voltage_v, 'V')),
+      field('Temperature', format(measurements?.temperature_c, '°C')),
+      field('Balancer status', measurements?.balancer_status),
+      field('Cell voltages', cellVoltages(measurements?.cell_voltages_v)),
+      field('BMS flags', hex(measurements?.bms_flags)),
+      field('Error flags', hex(measurements?.error_flags))
+    ]
+  }
+  if (decoded?.record_type === 0x09) {
+    return [
+      field('Device state', measurements?.state_name ?? measurements?.state),
+      field('Output state', measurements?.output_state),
+      field('Error', measurements?.error_name ?? measurements?.error),
+      field('Input voltage', format(measurements?.input_voltage_v, 'V')),
+      field('Output voltage', format(measurements?.output_voltage_v, 'V')),
+      field('Alarm reason', hex(measurements?.alarm_reason)),
+      field('Warning reason', hex(measurements?.warning_reason)),
+      field('Shutdown reason', offReason(measurements))
+    ]
+  }
+  if (decoded?.record_type === 0x0b || decoded?.record_type === 0x0c) {
+    return [
+      field('Device state', measurements?.state_name ?? measurements?.state),
+      field('Error', measurements?.error_name ?? measurements?.ve_bus_error),
+      field('Battery voltage', format(measurements?.battery_voltage_v, 'V')),
+      field('Battery current', format(measurements?.battery_current_a, 'A')),
+      field('Active AC input', measurements?.active_ac_input),
+      field('Active AC power', format(measurements?.active_ac_power_w, 'W')),
+      field('AC out power', format(measurements?.ac_out_power_w, 'W')),
+      field('PV power', format(measurements?.solar_power_w, 'W')),
+      field('Yield today', kilowattHours(measurements?.yield_today_j)),
+      field('State of charge', format(measurements?.state_of_charge_percent, '%')),
+      field('Temperature', format(measurements?.temperature_c, '°C')),
+      field('Alarm', measurements?.alarm)
+    ]
+  }
   return []
+}
+
+function cellVoltages(cells) {
+  if (!Array.isArray(cells)) return null
+  const present = cells.filter(cell => cell != null)
+  return present.length ? present.map(cell => cell.toFixed(2)).join(' / ') + ' V' : null
 }
 
 // Yield is carried in joules to match the Signal K unit. Operators read daily

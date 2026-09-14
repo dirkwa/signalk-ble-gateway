@@ -125,3 +125,35 @@ published as `unknown_<n>` rather than guessed.
 Shutdown reason remains diagnostic-only, visible in the web application and
 the status API. Unknown record types stay visible as raw data and never
 produce guessed measurements.
+
+## Records decoded from the specification but not yet tested
+
+The following records are decoded from the published Victron "Extra
+manufacturer data" specification, with tests built from the documented
+layouts. No hardware was available, so their values are unverified.
+
+```text
+0x02  battery monitor   SmartShunt, BMV   -> electrical.batteries.<id>
+0x03  inverter          Phoenix           -> electrical.inverters.<id>
+0x05  SmartLithium                        -> electrical.batteries.<id>
+0x06  Inverter RS                         -> electrical.inverters.<id>
+0x09  Smart Battery Protect               -> diagnostic only
+0x0B  Multi RS                            -> diagnostic only
+0x0C  VE.Bus                              -> diagnostic only
+0x0D  DC energy meter                     -> diagnostic only
+```
+
+The battery monitor and DC energy meter records carry a 16-bit auxiliary field
+whose meaning depends on a 2-bit selector stored after it: starter voltage,
+mid-point voltage, or temperature. Only the selected reading is returned; the
+others are null, because the same bits mean different things per device
+configuration. Starter and mid-point voltage have no Signal K leaf, so they
+appear in the status API only.
+
+Records `0x07` and `0x08` are not implemented. The specification marks both
+layouts as still to be determined and subject to change, so decoding them
+would be guesswork.
+
+If you have any of these devices, please compare the plugin values with
+VictronConnect and report the result. Do not post advertisement keys, and mask
+MAC addresses in any capture you share.

@@ -61,9 +61,28 @@ values. Device recognition alone is not considered support.
 | Orion XS | `0x0F` | Supported and tested | `electrical.chargers.<device-id>` |
 | SmartSolar MPPT | `0x01` | Decoder verified against the published specification and reference vectors | `electrical.solar.<device-id>` |
 | Orion Smart DC-DC | `0x04` | Decoder verified against the published specification and reference vectors | `electrical.chargers.<device-id>` |
-| SmartShunt / BMV | `0x02` | Planned; decoder not implemented | — |
-| Smart Battery Sense | — | Planned; decoder not implemented | — |
-| Other Victron BLE families | — | Not yet assessed | — |
+| SmartShunt / BMV | `0x02` | Decoder from the specification, **untested**, no hardware | `electrical.batteries.<device-id>` |
+| Phoenix Inverter | `0x03` | Decoder from the specification, **untested**, no hardware | `electrical.inverters.<device-id>` |
+| SmartLithium | `0x05` | Decoder from the specification, **untested**, no hardware | `electrical.batteries.<device-id>` |
+| Inverter RS | `0x06` | Decoder from the specification, **untested**, no hardware | `electrical.inverters.<device-id>` |
+| Smart Battery Protect | `0x09` | Decoder from the specification, **untested**, no hardware | diagnostic only |
+| Multi RS | `0x0B` | Decoder from the specification, **untested**, no hardware | diagnostic only |
+| VE.Bus | `0x0C` | Decoder from the specification, **untested**, no hardware | diagnostic only |
+| DC Energy Meter | `0x0D` | Decoder from the specification, **untested**, no hardware | diagnostic only |
+| GX Device | `0x07` | Not implemented; the specification marks the layout undetermined | — |
+| AC Charger | `0x08` | Not implemented; the specification marks the layout undetermined | — |
+| Smart Battery Sense | — | Uses the battery monitor record; **untested** | `electrical.batteries.<device-id>` |
+
+Records marked untested decode the layout published in the Victron "Extra
+manufacturer data" specification, with fixture-driven tests built from that
+document. No hardware was available to confirm them, so treat their values as
+unverified until someone reports a comparison against VictronConnect.
+
+Four records decode but publish nothing to Signal K, shown above as diagnostic
+only. Signal K has no battery-protect, Multi, VE.Bus or DC-meter group, and
+placing their measurements below an unrelated group would misdescribe the
+device. Their decoded values appear in the plugin status API and the web
+application.
 
 Additional device families will be marked supported only after we have real
 advertisement captures, a verified decoder, fixture-based tests, and confirmed

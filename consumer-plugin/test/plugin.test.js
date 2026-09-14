@@ -191,7 +191,7 @@ test('publishes DC/DC converter voltages on charger paths', () => {
 
 test('publishes nothing for a record type without a path builder', () => {
   const delta = measurementDelta({ id: 'shunt' }, {
-    record_type: 0x02,
+    record_type: 0x07,
     measurements: { battery_voltage_v: 12.3 }
   })
 

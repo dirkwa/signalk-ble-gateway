@@ -101,9 +101,17 @@ function chargingMode(state) {
 // A record type without an entry here publishes nothing. Falling back to a
 // path builder written for a different device would emit measurements under
 // paths that do not describe the device that sent them.
+// Records 0x09, 0x0b, 0x0c and 0x0d decode but publish nothing: Signal K has
+// no battery-protect, Multi, VE.Bus or DC-meter group, and inventing paths
+// below an unrelated group would misdescribe the device. Their decoded values
+// are visible in the status API and the web application.
 const PATH_BUILDERS = {
   0x01: solarChargerCandidates,
+  0x02: batteryMonitorCandidates,
+  0x03: inverterCandidates,
   0x04: dcDcConverterCandidates,
+  0x05: smartLithiumCandidates,
+  0x06: inverterRsCandidates,
   0x0a: lynxCandidates,
   0x0f: orionCandidates
 }
@@ -152,6 +160,59 @@ function dcDcConverterCandidates(id, values) {
     [`${base}.chargingMode`, chargingMode(values.state_name)],
     [`${base}.chargerState`, values.state_name],
     [`${base}.chargerError`, values.error_name]
+  ]
+}
+
+// SmartShunt and BMV. Signal K states of charge are ratios, capacity is in
+// joules and charge in coulombs, so the advertised percentage and amp-hours
+// are converted. Consumed Ah is negative by specification, and Signal K's
+// dischargeSinceFull is a positive quantity, hence the sign flip.
+function batteryMonitorCandidates(id, values) {
+  const base = `electrical.batteries.${id}`
+  return [
+    [`${base}.voltage`, values.battery_voltage_v],
+    [`${base}.current`, values.battery_current_a],
+    [`${base}.capacity.stateOfCharge`, values.state_of_charge_percent == null
+      ? null : values.state_of_charge_percent / 100],
+    [`${base}.capacity.timeRemaining`, values.time_to_go_s],
+    [`${base}.capacity.dischargeSinceFull`, values.consumed_ah == null
+      ? null : -values.consumed_ah * 3600],
+    // The aux temperature is advertised in 0.01 K, which is already the
+    // Signal K unit, so it passes through unconverted.
+    [`${base}.temperature`, values.temperature_k]
+    // The starter and mid-point voltages have no Signal K leaf. They stay in
+    // the status API rather than being invented below `voltage`, which the
+    // schema defines as a value leaf with only `ripple` beneath it.
+  ]
+}
+
+// SmartLithium reports per-cell voltages, which Signal K does not model, so
+// they stay in the status API. Pack voltage and temperature are published.
+function smartLithiumCandidates(id, values) {
+  const base = `electrical.batteries.${id}`
+  return [
+    [`${base}.voltage`, values.battery_voltage_v],
+    [`${base}.temperature`, values.temperature_c == null
+      ? null : values.temperature_c + 273.15]
+  ]
+}
+
+function inverterCandidates(id, values) {
+  const base = `electrical.inverters.${id}`
+  return [
+    [`${base}.dc.voltage`, values.battery_voltage_v],
+    [`${base}.ac.lineNeutralVoltage`, values.ac_voltage_v],
+    [`${base}.ac.current`, values.ac_current_a],
+    [`${base}.ac.apparentPower`, values.ac_apparent_power_va]
+  ]
+}
+
+function inverterRsCandidates(id, values) {
+  const base = `electrical.inverters.${id}`
+  return [
+    [`${base}.dc.voltage`, values.battery_voltage_v],
+    [`${base}.dc.current`, values.battery_current_a],
+    [`${base}.ac.realPower`, values.ac_out_power_w]
   ]
 }
 
