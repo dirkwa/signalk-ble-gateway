@@ -66,13 +66,26 @@ electrical.chargers.<id>.inputVoltage
 electrical.chargers.<id>.inputCurrent
 ```
 
-SmartSolar MPPT values are also published as a charger:
+SmartSolar MPPT values are published as solar, the Signal K group that defines
+leaves for panel power and daily yield:
+
+```text
+electrical.solar.<id>.voltage
+electrical.solar.<id>.current
+electrical.solar.<id>.panelPower
+electrical.solar.<id>.yieldToday
+electrical.solar.<id>.loadCurrent
+```
+
+Yield is published in joules, the Signal K unit for `yieldToday`. The
+advertisement carries 0.01 kWh units, which the consumer converts.
+
+Orion Smart DC-DC converters advertise record `0x04`, which carries only
+voltages:
 
 ```text
 electrical.chargers.<id>.voltage
-electrical.chargers.<id>.current
-electrical.chargers.<id>.power
-electrical.chargers.<id>.energy
+electrical.chargers.<id>.inputVoltage
 ```
 
 For Issue #1 testing, please compare these values with `victron-ble read` and
@@ -80,5 +93,22 @@ report the plugin status, Signal K paths, and any errors. Do not post the
 advertisement key. If raw advertisements are needed, mask the MAC address and
 share only the payload and RSSI.
 
-State, error code, and shutdown reason remain diagnostic-only. Unknown record
-types stay visible as raw data and never produce guessed measurements.
+Operating state and charger error are published as text alongside the
+measurements:
+
+```text
+electrical.solar.<id>.chargingMode
+electrical.solar.<id>.chargerError
+electrical.chargers.<id>.chargingMode
+electrical.chargers.<id>.chargerError
+```
+
+`chargingMode` is a Signal K schema leaf. `chargerError` is an explicit
+extension, as no charger error leaf is defined. Values are the names from the
+VE.Direct register list, for example `bulk`, `absorption`, `float`,
+`external_control` and `no_error`. A code without a settled meaning is
+published as `unknown_<n>` rather than guessed.
+
+Shutdown reason remains diagnostic-only, visible in the web application and
+the status API. Unknown record types stay visible as raw data and never
+produce guessed measurements.
