@@ -78,6 +78,26 @@ module.exports = function createPlugin(app) {
   }
 }
 
+// Signal K enumerates chargingMode as bulk, acceptance, overcharge, float,
+// equalize, unknown or other. VE.Direct device states do not map one to one:
+// Victron's "absorption" is Signal K's "acceptance", and states such as
+// external_control or low_power have no Signal K equivalent. Map to the
+// permitted vocabulary here and publish the exact VE.Direct name separately
+// on chargerState, so no information is lost.
+const SIGNALK_CHARGING_MODES = {
+  bulk: 'bulk',
+  absorption: 'acceptance',
+  float: 'float',
+  equalize_manual: 'equalize',
+  repeated_absorption: 'acceptance',
+  storage: 'float'
+}
+
+function chargingMode(state) {
+  if (state == null) return null
+  return SIGNALK_CHARGING_MODES[state] || 'other'
+}
+
 // A record type without an entry here publishes nothing. Falling back to a
 // path builder written for a different device would emit measurements under
 // paths that do not describe the device that sent them.
@@ -114,7 +134,8 @@ function solarChargerCandidates(id, values) {
     [`${base}.panelPower`, values.solar_power_w],
     [`${base}.yieldToday`, values.yield_today_j],
     [`${base}.loadCurrent`, values.external_device_load_a],
-    [`${base}.chargingMode`, values.charge_state],
+    [`${base}.chargingMode`, chargingMode(values.charge_state)],
+    [`${base}.chargerState`, values.charge_state],
     [`${base}.chargerError`, values.charger_error]
   ]
 }
@@ -128,7 +149,8 @@ function dcDcConverterCandidates(id, values) {
   return [
     [`${base}.voltage`, values.output_voltage_v],
     [`${base}.inputVoltage`, values.input_voltage_v],
-    [`${base}.chargingMode`, values.state_name],
+    [`${base}.chargingMode`, chargingMode(values.state_name)],
+    [`${base}.chargerState`, values.state_name],
     [`${base}.chargerError`, values.error_name]
   ]
 }
@@ -155,7 +177,8 @@ function orionCandidates(id, values) {
     [`${base}.current`, values.output_current_a],
     [`${base}.inputVoltage`, values.input_voltage_v],
     [`${base}.inputCurrent`, values.input_current_a],
-    [`${base}.chargingMode`, values.state_name],
+    [`${base}.chargingMode`, chargingMode(values.state_name)],
+    [`${base}.chargerState`, values.state_name],
     [`${base}.chargerError`, values.error_name]
   ]
 }

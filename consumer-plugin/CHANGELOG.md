@@ -39,10 +39,13 @@
 - Publish nothing for record types without a verified decoder. Previously an
   unrecognized record fell through to the Lynx battery paths, which could
   publish another device's measurements below `electrical.batteries`.
-- Publish operating state and charger error as text on `chargingMode` and
-  `chargerError` for both the solar and charger groups. These were previously
-  diagnostic-only. `chargingMode` is a Signal K schema leaf; `chargerError` is
-  an explicit extension, as the schema defines no charger error leaf.
+- Publish operating state and charger error as text for both the solar and
+  charger groups. These were previously diagnostic-only. `chargingMode` is a
+  Signal K schema leaf with an enumerated vocabulary, so VE.Direct states are
+  mapped onto it: `absorption` becomes `acceptance`, and a state without a
+  Signal K equivalent becomes `other`. `chargerState` and `chargerError` are
+  explicit extensions carrying the exact VE.Direct names, as the schema
+  defines no leaf for either.
 - Name the VE.Direct device states and the charger error codes that have a
   settled meaning. A live SmartSolar MPPT reported state 252, which is
   `external_control` and previously decoded as `unknown_252`.

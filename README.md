@@ -85,6 +85,7 @@ electrical.chargers.<device-id>.current
 electrical.chargers.<device-id>.inputVoltage
 electrical.chargers.<device-id>.inputCurrent
 electrical.chargers.<device-id>.chargingMode
+electrical.chargers.<device-id>.chargerState
 electrical.chargers.<device-id>.chargerError
 ```
 

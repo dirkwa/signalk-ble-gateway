@@ -109,6 +109,7 @@ test('publishes Orion output and input measurements on charger paths', () => {
     { path: 'electrical.chargers.orionSt.inputVoltage', value: 13.88 },
     { path: 'electrical.chargers.orionSt.inputCurrent', value: 48.8 },
     { path: 'electrical.chargers.orionSt.chargingMode', value: 'bulk' },
+    { path: 'electrical.chargers.orionSt.chargerState', value: 'bulk' },
     { path: 'electrical.chargers.orionSt.chargerError', value: 'no_error' }
   ])
 })
@@ -134,8 +135,34 @@ test('publishes Solar Charger measurements on solar paths', () => {
     { path: 'electrical.solar.mppt.yieldToday', value: 3348000 },
     { path: 'electrical.solar.mppt.loadCurrent', value: 2 },
     { path: 'electrical.solar.mppt.chargingMode', value: 'float' },
+    { path: 'electrical.solar.mppt.chargerState', value: 'float' },
     { path: 'electrical.solar.mppt.chargerError', value: 'no_error' }
   ])
+})
+
+// Signal K enumerates chargingMode; the VE.Direct state goes to chargerState.
+test('maps VE.Direct states onto the Signal K chargingMode vocabulary', () => {
+  const modeFor = state => {
+    const delta = measurementDelta({ id: 'mppt' }, {
+      record_type: 0x01,
+      measurements: { charge_state: state }
+    })
+    const values = delta.updates[0].values
+    return {
+      mode: values.find(v => v.path.endsWith('.chargingMode'))?.value,
+      state: values.find(v => v.path.endsWith('.chargerState'))?.value
+    }
+  }
+
+  assert.deepEqual(modeFor('absorption'), { mode: 'acceptance', state: 'absorption' })
+  assert.deepEqual(modeFor('bulk'), { mode: 'bulk', state: 'bulk' })
+  assert.deepEqual(modeFor('float'), { mode: 'float', state: 'float' })
+  assert.deepEqual(modeFor('equalize_manual'), { mode: 'equalize', state: 'equalize_manual' })
+  // No Signal K equivalent: fall back to the permitted 'other'.
+  assert.deepEqual(modeFor('external_control'), { mode: 'other', state: 'external_control' })
+  assert.deepEqual(modeFor('off'), { mode: 'other', state: 'off' })
+  assert.deepEqual(modeFor('unknown_99'), { mode: 'other', state: 'unknown_99' })
+  assert.deepEqual(modeFor(null), { mode: undefined, state: undefined })
 })
 
 test('publishes DC/DC converter voltages on charger paths', () => {
@@ -156,7 +183,8 @@ test('publishes DC/DC converter voltages on charger paths', () => {
   assert.deepEqual(delta.updates[0].values, [
     { path: 'electrical.chargers.orionStart.voltage', value: 12.9 },
     { path: 'electrical.chargers.orionStart.inputVoltage', value: 13.15 },
-    { path: 'electrical.chargers.orionStart.chargingMode', value: 'off' },
+    { path: 'electrical.chargers.orionStart.chargingMode', value: 'other' },
+    { path: 'electrical.chargers.orionStart.chargerState', value: 'off' },
     { path: 'electrical.chargers.orionStart.chargerError', value: 'no_error' }
   ])
 })
