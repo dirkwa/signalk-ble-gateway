@@ -148,7 +148,23 @@ whose meaning depends on a 2-bit selector stored after it: starter voltage,
 mid-point voltage, or temperature. Only the selected reading is returned; the
 others are null, because the same bits mean different things per device
 configuration. Starter and mid-point voltage have no Signal K leaf, so they
-appear in the status API only.
+appear in the status API only. The DC energy meter has no mid-point reading,
+so that selector is rejected for it rather than producing a value the record
+does not carry.
+
+SmartLithium cell voltages are reported as a bound and a voltage, because the
+specification defines the two end values as thresholds rather than
+measurements:
+
+```text
+{ bound: 'below', voltage_v: 2.61 }   cell is under 2.61 V, no lower bound given
+{ bound: 'exact', voltage_v: 3.25 }   a measurement
+{ bound: 'above', voltage_v: 3.85 }   cell is over 3.85 V, no upper bound given
+null                                  not available
+```
+
+An unavailable cell keeps its position in the list, so cell numbering stays
+meaningful when one reading is missing.
 
 Records `0x07` and `0x08` are not implemented. The specification marks both
 layouts as still to be determined and subject to change, so decoding them

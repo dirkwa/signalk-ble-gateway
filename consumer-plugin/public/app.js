@@ -164,10 +164,17 @@ function measurementFields(decoded) {
   return []
 }
 
+// Cell position is meaningful: a missing cell 3 must not make cell 4 look
+// like cell 3. Unavailable cells keep their slot as a dash.
 function cellVoltages(cells) {
-  if (!Array.isArray(cells)) return null
-  const present = cells.filter(cell => cell != null)
-  return present.length ? present.map(cell => cell.toFixed(2)).join(' / ') + ' V' : null
+  if (!Array.isArray(cells) || !cells.some(cell => cell != null)) return null
+  return cells.map(cell => {
+    if (cell == null) return '–'
+    const value = cell.voltage_v.toFixed(2)
+    if (cell.bound === 'below') return `<${value}`
+    if (cell.bound === 'above') return `>${value}`
+    return value
+  }).join(' / ') + ' V'
 }
 
 // Yield is carried in joules to match the Signal K unit. Operators read daily

@@ -64,3 +64,11 @@
   selector, returning only the reading the device actually sent.
 - Leave records `0x07` and `0x08` unimplemented; the specification marks both
   layouts undetermined.
+- Report SmartLithium cell readings as a bound and a voltage. The
+  specification defines the two end values as thresholds rather than
+  measurements, so reporting them as 2.60 V and 3.86 V stated a precision the
+  device never sent and made an over-voltage cell read as an ordinary value.
+- Reject the mid-point voltage selector on the DC energy meter, whose
+  specification table lists selectors 0, 2 and 3 only.
+- Keep unavailable SmartLithium cells in position in the diagnostic web
+  application, so a missing reading cannot renumber the cells after it.

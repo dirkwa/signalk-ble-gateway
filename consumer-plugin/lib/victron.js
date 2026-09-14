@@ -216,8 +216,8 @@ const AUX_INPUTS = { 0: 'aux_voltage', 1: 'mid_voltage', 2: 'temperature', 3: 'n
  * and passed in. Only the selected reading is returned; the others would be
  * a reinterpretation of bits that do not mean what they appear to mean.
  */
-function decodeAuxInput(raw, selector) {
-  const name = AUX_INPUTS[selector] ?? null
+function decodeAuxInput(raw, selector, allowMidVoltage = true) {
+  const name = selector === 1 && !allowMidVoltage ? null : (AUX_INPUTS[selector] ?? null)
   const result = {
     aux_input: name,
     aux_voltage_v: null,
@@ -295,7 +295,9 @@ function decodeDcEnergyMeter(data) {
     bmv_monitor_mode: monitorMode,
     battery_voltage_v: valueUnless(voltage, 0x7fff, value => value * 0.01),
     alarm_reason: alarmReason,
-    ...decodeAuxInput(auxRaw, auxSelector),
+    // The DC energy meter table lists selectors 0, 2 and 3 only: this record
+    // has no mid-point voltage reading.
+    ...decodeAuxInput(auxRaw, auxSelector, false),
     battery_current_a: signedUnlessAllOnes(data, 66, 22, value => value * 0.001)
   }
 }
@@ -363,6 +365,23 @@ function decodeInverterRs(data) {
 }
 
 /**
+ * Decode one VE_REG_BATTERY_CELL_VOLTAGE reading.
+ *
+ * The specification defines the two end values as thresholds rather than
+ * measurements: 0 means the cell is below 2.61 V and 126 means it is above
+ * 3.85 V, with no upper or lower bound given. Reporting those as 2.60 V and
+ * 3.86 V would state a precision the device did not send, and 3.86 V in
+ * particular reads as an ordinary value while the cell is actually
+ * over-voltage. Both are returned with an explicit bound instead.
+ */
+function decodeCellVoltage(raw) {
+  if (raw === null || raw === 0x7f) return null
+  if (raw === 0) return { bound: 'below', voltage_v: 2.61 }
+  if (raw === 126) return { bound: 'above', voltage_v: 3.85 }
+  return { bound: 'exact', voltage_v: Math.round((2.6 + raw * 0.01) * 100) / 100 }
+}
+
+/**
  * Decode the SmartLithium record (type 0x05).
  *
  * spec bit 32  -> 0    BMS flags         32 bits
@@ -380,8 +399,7 @@ function decodeSmartLithium(data) {
   const errorFlags = readBits(data, 32, 16)
   const cells = []
   for (let index = 0; index < 8; index += 1) {
-    const raw = readBits(data, 48 + index * 7, 7)
-    cells.push(valueUnless(raw, 0x7f, value => Math.round((2.6 + value * 0.01) * 100) / 100))
+    cells.push(decodeCellVoltage(readBits(data, 48 + index * 7, 7)))
   }
   const voltage = readBits(data, 104, 12)
   const balancer = readBits(data, 116, 4)

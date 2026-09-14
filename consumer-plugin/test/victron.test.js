@@ -396,7 +396,7 @@ test('decodes the documented SmartLithium layout', () => {
 
   const decoded = decodeSmartLithium(data)
   assert.equal(decoded.cell_voltages_v.length, 8)
-  assert.equal(decoded.cell_voltages_v[0], 3.25)
+  assert.deepEqual(decoded.cell_voltages_v[0], { bound: 'exact', voltage_v: 3.25 })
   assert.equal(Math.round(decoded.battery_voltage_v * 100) / 100, 13.2)
   assert.equal(decoded.balancer_status, 2)
   assert.equal(decoded.temperature_c, 25)
@@ -515,4 +515,45 @@ test('still sign-extends a genuine negative current', () => {
   const data = Buffer.alloc(16)
   writeBits(data, 66, 22, -1500)
   assert.equal(decodeBatteryMonitor(data).battery_current_a, -1.5)
+})
+
+// The specification defines raw 0 and 126 as thresholds, not measurements:
+// below 2.61 V and above 3.85 V, with no bound given in either direction.
+test('reports SmartLithium cell thresholds as bounds, not exact voltages', () => {
+  const cellsFor = raws => {
+    const data = Buffer.alloc(20)
+    raws.forEach((raw, index) => writeBits(data, 48 + index * 7, 7, raw))
+    return decodeSmartLithium(data).cell_voltages_v
+  }
+
+  const cells = cellsFor([0, 1, 65, 125, 126, 0x7f, 0x7f, 0x7f])
+  assert.deepEqual(cells[0], { bound: 'below', voltage_v: 2.61 })
+  assert.deepEqual(cells[1], { bound: 'exact', voltage_v: 2.61 })
+  assert.deepEqual(cells[2], { bound: 'exact', voltage_v: 3.25 })
+  assert.deepEqual(cells[3], { bound: 'exact', voltage_v: 3.85 })
+  assert.deepEqual(cells[4], { bound: 'above', voltage_v: 3.85 })
+  assert.equal(cells[5], null)
+})
+
+// The DC energy meter aux table lists selectors 0, 2 and 3 only.
+test('rejects a mid-voltage selector on the DC energy meter', () => {
+  const data = Buffer.alloc(16)
+  writeBits(data, 48, 16, 2500)
+  writeBits(data, 64, 2, 1)
+
+  const decoded = decodeDcEnergyMeter(data)
+  assert.equal(decoded.aux_input, null)
+  assert.equal(decoded.mid_voltage_v, null)
+  assert.equal(decoded.aux_voltage_v, null)
+  assert.equal(decoded.temperature_k, null)
+})
+
+test('still accepts a mid-voltage selector on the battery monitor', () => {
+  const data = Buffer.alloc(16)
+  writeBits(data, 48, 16, 2500)
+  writeBits(data, 64, 2, 1)
+
+  const decoded = decodeBatteryMonitor(data)
+  assert.equal(decoded.aux_input, 'mid_voltage')
+  assert.equal(decoded.mid_voltage_v, 25)
 })
