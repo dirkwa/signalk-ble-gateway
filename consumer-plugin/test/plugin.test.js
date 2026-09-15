@@ -96,7 +96,9 @@ test('publishes Orion output and input measurements on charger paths', () => {
       input_voltage_v: 13.88,
       input_current_a: 48.8,
       state: 3,
+      state_name: 'bulk',
       error: 0,
+      error_name: 'no_error',
       off_reason: 0
     }
   })
@@ -105,6 +107,93 @@ test('publishes Orion output and input measurements on charger paths', () => {
     { path: 'electrical.chargers.orionSt.voltage', value: 13.57 },
     { path: 'electrical.chargers.orionSt.current', value: 48.8 },
     { path: 'electrical.chargers.orionSt.inputVoltage', value: 13.88 },
-    { path: 'electrical.chargers.orionSt.inputCurrent', value: 48.8 }
+    { path: 'electrical.chargers.orionSt.inputCurrent', value: 48.8 },
+    { path: 'electrical.chargers.orionSt.chargingMode', value: 'bulk' },
+    { path: 'electrical.chargers.orionSt.chargerState', value: 'bulk' },
+    { path: 'electrical.chargers.orionSt.chargerError', value: 'no_error' }
   ])
+})
+
+test('publishes Solar Charger measurements on solar paths', () => {
+  const delta = measurementDelta({ id: 'mppt' }, {
+    record_type: 0x01,
+    measurements: {
+      battery_voltage_v: 13.48,
+      battery_charging_current_a: 3.6,
+      solar_power_w: 50,
+      yield_today_j: 3348000,
+      external_device_load_a: 2,
+      charge_state: 'float',
+      charger_error: 'no_error'
+    }
+  })
+
+  assert.deepEqual(delta.updates[0].values, [
+    { path: 'electrical.solar.mppt.voltage', value: 13.48 },
+    { path: 'electrical.solar.mppt.current', value: 3.6 },
+    { path: 'electrical.solar.mppt.panelPower', value: 50 },
+    { path: 'electrical.solar.mppt.yieldToday', value: 3348000 },
+    { path: 'electrical.solar.mppt.loadCurrent', value: 2 },
+    { path: 'electrical.solar.mppt.chargingMode', value: 'float' },
+    { path: 'electrical.solar.mppt.chargerState', value: 'float' },
+    { path: 'electrical.solar.mppt.chargerError', value: 'no_error' }
+  ])
+})
+
+// Signal K enumerates chargingMode; the VE.Direct state goes to chargerState.
+test('maps VE.Direct states onto the Signal K chargingMode vocabulary', () => {
+  const modeFor = state => {
+    const delta = measurementDelta({ id: 'mppt' }, {
+      record_type: 0x01,
+      measurements: { charge_state: state }
+    })
+    const values = delta.updates[0].values
+    return {
+      mode: values.find(v => v.path.endsWith('.chargingMode'))?.value,
+      state: values.find(v => v.path.endsWith('.chargerState'))?.value
+    }
+  }
+
+  assert.deepEqual(modeFor('absorption'), { mode: 'acceptance', state: 'absorption' })
+  assert.deepEqual(modeFor('bulk'), { mode: 'bulk', state: 'bulk' })
+  assert.deepEqual(modeFor('float'), { mode: 'float', state: 'float' })
+  assert.deepEqual(modeFor('equalize_manual'), { mode: 'equalize', state: 'equalize_manual' })
+  // No Signal K equivalent: fall back to the permitted 'other'.
+  assert.deepEqual(modeFor('external_control'), { mode: 'other', state: 'external_control' })
+  assert.deepEqual(modeFor('off'), { mode: 'other', state: 'off' })
+  assert.deepEqual(modeFor('unknown_99'), { mode: 'other', state: 'unknown_99' })
+  assert.deepEqual(modeFor(null), { mode: undefined, state: undefined })
+})
+
+test('publishes DC/DC converter voltages on charger paths', () => {
+  const delta = measurementDelta({ id: 'orionStart' }, {
+    record_type: 0x04,
+    measurements: {
+      state: 0,
+      state_name: 'off',
+      error: 0,
+      error_name: 'no_error',
+      input_voltage_v: 13.15,
+      output_voltage_v: 12.9,
+      off_reason: 128,
+      off_reasons: ['engine_shutdown']
+    }
+  })
+
+  assert.deepEqual(delta.updates[0].values, [
+    { path: 'electrical.chargers.orionStart.voltage', value: 12.9 },
+    { path: 'electrical.chargers.orionStart.inputVoltage', value: 13.15 },
+    { path: 'electrical.chargers.orionStart.chargingMode', value: 'other' },
+    { path: 'electrical.chargers.orionStart.chargerState', value: 'off' },
+    { path: 'electrical.chargers.orionStart.chargerError', value: 'no_error' }
+  ])
+})
+
+test('publishes nothing for a record type without a path builder', () => {
+  const delta = measurementDelta({ id: 'shunt' }, {
+    record_type: 0x02,
+    measurements: { battery_voltage_v: 12.3 }
+  })
+
+  assert.deepEqual(delta.updates[0].values, [])
 })

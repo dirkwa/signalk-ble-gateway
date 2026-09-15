@@ -59,8 +59,8 @@ function measurementFields(decoded) {
   }
   if (decoded?.record_type === 0x0f) {
     return [
-      field('Charge state code', measurements?.state),
-      field('Error code', measurements?.error),
+      field('Charge state', measurements?.state_name ?? measurements?.state),
+      field('Charger error', measurements?.error_name ?? measurements?.error),
       field('Input voltage', format(measurements?.input_voltage_v, 'V')),
       field('Input current', format(measurements?.input_current_a, 'A')),
       field('Output voltage', format(measurements?.output_voltage_v, 'V')),
@@ -68,7 +68,33 @@ function measurementFields(decoded) {
       field('Shutdown reason', offReason(measurements))
     ]
   }
+  if (decoded?.record_type === 0x01) {
+    return [
+      field('Charge state', measurements?.charge_state),
+      field('Charger error', measurements?.charger_error),
+      field('Battery voltage', format(measurements?.battery_voltage_v, 'V')),
+      field('Charging current', format(measurements?.battery_charging_current_a, 'A')),
+      field('PV power', format(measurements?.solar_power_w, 'W')),
+      field('Yield today', kilowattHours(measurements?.yield_today_j)),
+      field('Load current', format(measurements?.external_device_load_a, 'A'))
+    ]
+  }
+  if (decoded?.record_type === 0x04) {
+    return [
+      field('Device state', measurements?.state_name ?? measurements?.state),
+      field('Charger error', measurements?.error_name ?? measurements?.error),
+      field('Input voltage', format(measurements?.input_voltage_v, 'V')),
+      field('Output voltage', format(measurements?.output_voltage_v, 'V')),
+      field('Shutdown reason', offReason(measurements))
+    ]
+  }
   return []
+}
+
+// Yield is carried in joules to match the Signal K unit. Operators read daily
+// yield in kWh, which is also the unit VictronConnect shows.
+function kilowattHours(joules) {
+  return joules == null ? null : `${(joules / 3600000).toFixed(2)} kWh`
 }
 
 function format(value, unit) {

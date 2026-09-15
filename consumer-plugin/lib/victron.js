@@ -38,11 +38,8 @@ function decodeEnvelope(advertisement, keyValue) {
   const decipher = crypto.createDecipheriv('aes-128-ctr', key, counter)
   const decrypted = Buffer.concat([decipher.update(payload.subarray(8)), decipher.final()])
 
-  const measurements = recordType === 0x0a
-    ? decodeLynxSmartBms(decrypted)
-    : recordType === 0x0f
-      ? decodeOrionXs(decrypted)
-      : null
+  const decoder = RECORD_DECODERS[recordType]
+  const measurements = decoder ? decoder(decrypted) : null
 
   return {
     company_id: VICTRON_COMPANY_ID,
@@ -110,11 +107,117 @@ function decodeOrionXs(data) {
 
   return {
     state,
+    state_name: deviceState(state),
     error,
+    error_name: chargerErrorName(error),
     output_voltage_v: valueUnless(outputVoltage, 0x7fff, value => value / 100),
     output_current_a: valueUnless(outputCurrent, 0x7fff, value => value / 10),
     input_voltage_v: valueUnless(inputVoltage, 0xffff, value => value / 100),
     input_current_a: valueUnless(inputCurrent, 0xffff, value => value / 10),
+    off_reason: offReason,
+    off_reasons: decodeOrionOffReasons(offReason)
+  }
+}
+
+function decodeSolarCharger(data) {
+  const chargeState = readBits(data, 0, 8)
+  const chargerError = readBits(data, 8, 8)
+  const batteryVoltage = readBits(data, 16, 16, true)
+  const batteryCurrent = readBits(data, 32, 16, true)
+  const yieldToday = readBits(data, 48, 16)
+  const solarPower = readBits(data, 64, 16)
+  const externalLoad = readBits(data, 80, 9)
+
+  return {
+    charge_state: deviceState(chargeState),
+    charger_error: chargerErrorName(chargerError),
+    battery_voltage_v: valueUnless(batteryVoltage, 0x7fff, value => value * 0.01),
+    battery_charging_current_a: valueUnless(batteryCurrent, 0x7fff, value => value * 0.1),
+    // Specification unit is 0.01 kWh; 1 kWh is 3.6e6 J.
+    yield_today_j: valueUnless(yieldToday, 0xffff, value => value * 0.01 * 3600000),
+    solar_power_w: valueUnless(solarPower, 0xffff),
+    external_device_load_a: valueUnless(externalLoad, 0x1ff, value => value * 0.1)
+  }
+}
+
+/**
+ * VE_REG_DEVICE_STATE. Values observed on live hardware and cross-checked
+ * against the VE.Direct state list. 0xFF is the specified NA value.
+ */
+const DEVICE_STATES = {
+  0: 'off',
+  1: 'low_power',
+  2: 'fault',
+  3: 'bulk',
+  4: 'absorption',
+  5: 'float',
+  6: 'storage',
+  7: 'equalize_manual',
+  9: 'inverting',
+  11: 'power_supply',
+  245: 'starting_up',
+  246: 'repeated_absorption',
+  247: 'recondition',
+  248: 'battery_safe',
+  249: 'active',
+  252: 'external_control'
+}
+
+function deviceState(value) {
+  if (value === null || value === 0xff) return null
+  return DEVICE_STATES[value] || `unknown_${value}`
+}
+
+/**
+ * VE_REG_CHR_ERROR_CODE. Only the codes with a settled meaning are named; any
+ * other code is reported numerically rather than guessed.
+ */
+const CHARGER_ERRORS = {
+  0: 'no_error',
+  1: 'battery_temperature_high',
+  2: 'battery_voltage_high',
+  17: 'charger_temperature_high',
+  18: 'charger_over_current',
+  20: 'bulk_time_limit_exceeded',
+  26: 'charger_terminals_overheated',
+  33: 'input_voltage_high',
+  34: 'input_current_high'
+}
+
+function chargerErrorName(value) {
+  if (value === null || value === 0xff) return null
+  return CHARGER_ERRORS[value] || `unknown_${value}`
+}
+
+/**
+ * Decode the DC/DC converter record (type 0x04).
+ *
+ * Layout from the published Victron "Extra manufacturer data" specification
+ * (2022-12-14). Specification start bits are counted from the beginning of the
+ * whole record, whose first 32 bits are the record type, nonce and key check
+ * byte. Those 32 bits are stripped before decryption, so each documented start
+ * bit appears here 32 lower.
+ *
+ * spec bit 32 -> 0    device state      8 bits, NA 0xFF
+ * spec bit 40 -> 8    charger error     8 bits, NA 0xFF
+ * spec bit 48 -> 16   input voltage    16 bits, unsigned, 0.01 V, NA 0xFFFF
+ * spec bit 64 -> 32   output voltage   16 bits, signed,   0.01 V, NA 0x7FFF
+ * spec bit 80 -> 48   off reason       32 bits
+ */
+function decodeDcDcConverter(data) {
+  const state = readBits(data, 0, 8)
+  const error = readBits(data, 8, 8)
+  const inputVoltage = readBits(data, 16, 16)
+  const outputVoltage = readBits(data, 32, 16, true)
+  const offReason = readBits(data, 48, 32)
+
+  return {
+    state: valueUnless(state, 0xff),
+    state_name: deviceState(state),
+    error: valueUnless(error, 0xff),
+    error_name: chargerErrorName(error),
+    input_voltage_v: valueUnless(inputVoltage, 0xffff, value => value * 0.01),
+    output_voltage_v: valueUnless(outputVoltage, 0x7fff, value => value * 0.01),
     off_reason: offReason,
     off_reasons: decodeOrionOffReasons(offReason)
   }
@@ -128,12 +231,27 @@ function decodeOrionOffReasons(value) {
   return reasons
 }
 
+/**
+ * Decoders for the record types this consumer has validated. A record type
+ * that is absent here is reported by name with `measurements: null` rather
+ * than decoded by a decoder written for a different layout.
+ */
+const RECORD_DECODERS = {
+  0x01: decodeSolarCharger,
+  0x04: decodeDcDcConverter,
+  0x0a: decodeLynxSmartBms,
+  0x0f: decodeOrionXs
+}
+
 module.exports = {
+  decodeDcDcConverter,
   decodeEnvelope,
   decodeLynxSmartBms,
   decodeOrionOffReasons,
   decodeOrionXs,
+  decodeSolarCharger,
   normalizeKey,
+  RECORD_DECODERS,
   RECORD_TYPES,
   VICTRON_COMPANY_ID
 }

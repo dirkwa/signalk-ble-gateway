@@ -78,11 +78,40 @@ module.exports = function createPlugin(app) {
   }
 }
 
+// Signal K enumerates chargingMode as bulk, acceptance, overcharge, float,
+// equalize, unknown or other. VE.Direct device states do not map one to one:
+// Victron's "absorption" is Signal K's "acceptance", and states such as
+// external_control or low_power have no Signal K equivalent. Map to the
+// permitted vocabulary here and publish the exact VE.Direct name separately
+// on chargerState, so no information is lost.
+const SIGNALK_CHARGING_MODES = {
+  bulk: 'bulk',
+  absorption: 'acceptance',
+  float: 'float',
+  equalize_manual: 'equalize',
+  repeated_absorption: 'acceptance',
+  storage: 'float'
+}
+
+function chargingMode(state) {
+  if (state == null) return null
+  return SIGNALK_CHARGING_MODES[state] || 'other'
+}
+
+// A record type without an entry here publishes nothing. Falling back to a
+// path builder written for a different device would emit measurements under
+// paths that do not describe the device that sent them.
+const PATH_BUILDERS = {
+  0x01: solarChargerCandidates,
+  0x04: dcDcConverterCandidates,
+  0x0a: lynxCandidates,
+  0x0f: orionCandidates
+}
+
 function measurementDelta(device, decoded) {
   const values = decoded.measurements
-  const candidates = decoded.record_type === 0x0f
-    ? orionCandidates(device.id, values)
-    : lynxCandidates(device.id, values)
+  const builder = PATH_BUILDERS[decoded.record_type]
+  const candidates = builder ? builder(device.id, values) : []
   return {
     updates: [{
       source: { label: 'Victron BLE', src: device.id },
@@ -92,6 +121,38 @@ function measurementDelta(device, decoded) {
         .map(([path, value]) => ({ path, value }))
     }]
   }
+}
+
+// Signal K models solar controllers under electrical.solar, which carries
+// exact leaves for every MPPT advertisement field. electrical.chargers has no
+// power, energy or panel leaf, so the MPPT is published as solar.
+function solarChargerCandidates(id, values) {
+  const base = `electrical.solar.${id}`
+  return [
+    [`${base}.voltage`, values.battery_voltage_v],
+    [`${base}.current`, values.battery_charging_current_a],
+    [`${base}.panelPower`, values.solar_power_w],
+    [`${base}.yieldToday`, values.yield_today_j],
+    [`${base}.loadCurrent`, values.external_device_load_a],
+    [`${base}.chargingMode`, chargingMode(values.charge_state)],
+    [`${base}.chargerState`, values.charge_state],
+    [`${base}.chargerError`, values.charger_error]
+  ]
+}
+
+// The DC/DC converter advertisement carries only voltages plus operating
+// state. Output side uses the standard charger voltage leaf; the source side
+// is an explicit extension, matching how the Orion XS record is published.
+// chargingMode is schema-defined; chargerError is an explicit extension.
+function dcDcConverterCandidates(id, values) {
+  const base = `electrical.chargers.${id}`
+  return [
+    [`${base}.voltage`, values.output_voltage_v],
+    [`${base}.inputVoltage`, values.input_voltage_v],
+    [`${base}.chargingMode`, chargingMode(values.state_name)],
+    [`${base}.chargerState`, values.state_name],
+    [`${base}.chargerError`, values.error_name]
+  ]
 }
 
 function lynxCandidates(id, values) {
@@ -115,7 +176,10 @@ function orionCandidates(id, values) {
     [`${base}.voltage`, values.output_voltage_v],
     [`${base}.current`, values.output_current_a],
     [`${base}.inputVoltage`, values.input_voltage_v],
-    [`${base}.inputCurrent`, values.input_current_a]
+    [`${base}.inputCurrent`, values.input_current_a],
+    [`${base}.chargingMode`, chargingMode(values.state_name)],
+    [`${base}.chargerState`, values.state_name],
+    [`${base}.chargerError`, values.error_name]
   ]
 }
 

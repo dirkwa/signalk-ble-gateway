@@ -24,6 +24,42 @@ The published Victron specification names Lynx fields `VE_REG_BMS_IO` and
 The web application therefore displays both as raw hexadecimal values and does
 not invent bit meanings.
 
+## Record layouts and the published specification
+
+Field offsets come from the Victron "Extra manufacturer data" specification
+dated 2022-12-14. That document counts start bits from the beginning of the
+whole record, whose first 32 bits are the record type, the nonce and the key
+check byte. Those 32 bits are removed before decryption, so every documented
+start bit appears 32 lower in the decoders, which index into the decrypted
+payload.
+
+A record type without a decoder is reported by name with no measurements. The
+consumer never applies a decoder written for one record layout to a different
+record type.
+
+## Solar Charger
+
+Record type `0x01` carries device state, charger error, battery voltage and
+current, yield today, PV power, and load current. The specification expresses
+yield today in 0.01 kWh; the consumer converts it to joules, the Signal K unit
+for `electrical.solar.<id>.yieldToday`.
+
+Signal K models solar controllers under `electrical.solar`, which defines
+exact leaves for every advertised MPPT field. `electrical.chargers` has no
+power, energy or panel leaf, so MPPT measurements are published as solar
+rather than invented below the charger group.
+
+## DC/DC converter
+
+Record type `0x04` is the record advertised by Orion Smart DC-DC converters.
+It carries device state, charger error, input voltage, output voltage, and a
+32-bit off-reason field. It has no current fields, so only the two voltages
+reach Signal K.
+
+Record type `0x04` is distinct from the Orion XS record `0x0F` below. They
+have different layouts, and decoding one with the other's field offsets
+produces plausible but wrong voltages.
+
 ## Orion XS
 
 The observed Orion XS model `0xA3F8` uses record type `0x0F`. Its published

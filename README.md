@@ -43,10 +43,32 @@ built specifically around the new Signal K BLE Provider API.
 - server-side Victron advertisement decryption,
 - Lynx Smart BMS decoding,
 - Orion XS decoding,
+- SmartSolar MPPT decoding,
+- Orion Smart DC-DC decoding,
 - Orion Signal K output paths verified on a live server,
 - provider and consumer lifecycle separation verified,
 - automated provider and consumer tests passing,
 - ESP32 firmware build passing.
+
+## Victron device support
+
+Support refers to decoded BLE advertisement data and published Signal K
+values. Device recognition alone is not considered support.
+
+| Victron family | Record | Status | Signal K output |
+| --- | --- | --- | --- |
+| Lynx Smart BMS | `0x0A` | Supported and tested | `electrical.batteries.<device-id>` |
+| Orion XS | `0x0F` | Supported and tested | `electrical.chargers.<device-id>` |
+| SmartSolar MPPT | `0x01` | Decoder verified against the published specification and reference vectors | `electrical.solar.<device-id>` |
+| Orion Smart DC-DC | `0x04` | Decoder verified against the published specification and reference vectors | `electrical.chargers.<device-id>` |
+| SmartShunt / BMV | `0x02` | Planned; decoder not implemented | — |
+| Smart Battery Sense | — | Planned; decoder not implemented | — |
+| Other Victron BLE families | — | Not yet assessed | — |
+
+Additional device families will be marked supported only after we have real
+advertisement captures, a verified decoder, fixture-based tests, and confirmed
+Signal K paths. See the [Victron coverage roadmap](TODO.md#priority-7-expand-victron-ble-coverage)
+for the current development order.
 
 Lynx Smart BMS values are published below:
 
@@ -62,6 +84,9 @@ electrical.chargers.<device-id>.voltage
 electrical.chargers.<device-id>.current
 electrical.chargers.<device-id>.inputVoltage
 electrical.chargers.<device-id>.inputCurrent
+electrical.chargers.<device-id>.chargingMode
+electrical.chargers.<device-id>.chargerState
+electrical.chargers.<device-id>.chargerError
 ```
 
 The 0.2.0 release passed a 90-hour endurance run on stable power. The
