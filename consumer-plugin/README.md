@@ -26,7 +26,7 @@ not at the repository root, so a branch archive URL cannot be installed
 directly.
 
 ```sh
-git clone -b feat/victron-mppt-support https://github.com/haipule/signalk-ble-gateway.git
+git clone -b feat/victron-mppt-support https://github.com/dirkwa/signalk-ble-gateway.git
 cd ~/.signalk
 npm install /path/to/signalk-ble-gateway/consumer-plugin
 ```
